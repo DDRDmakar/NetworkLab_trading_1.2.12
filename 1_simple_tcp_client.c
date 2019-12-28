@@ -61,12 +61,20 @@ int main(int argc, char **argv)
 	bzero(buffer, BUFFER_LEN);
 	
 	int read_status = 1;
+	char *cl[10];
 	
 	while (read_status > 0 && strcmp(buffer, "q"))
 	{
 		bzero(buffer, BUFFER_LEN);
 		fgets(buffer, BUFFER_LEN, stdin);
 		buffer[strlen(buffer) - 1] = '\0'; // Remove \n in the end
+		
+		char pch = strtok (buffer, "");//////////////////////
+		while (pch != NULL)
+		{
+			printf ("%s\n",pch);
+			pch = strtok (NULL, " ,.-");
+		}
 		
 		if (!strcmp(buffer, "list"))
 		{

@@ -116,4 +116,5 @@ void Server::add_lot(Lot &newlot)
 
 void Server::finish(void)
 {
+	printf("Server: finish all lots");
 }
