@@ -1,10 +1,4 @@
 
-/*
- * 
- * Разработка простейшего клиента TCP
- * 
- */
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -16,6 +10,7 @@
 #define SERVER_ADDR "127.0.0.1"
 #define SERVER_PORT 6000
 #define BUFFER_LEN  256
+#define TAKETOKEN   pch = strtok(NULL, " ");
 
 // First 4 bytes - message type
 enum MESSAGE_TYPE
@@ -69,22 +64,32 @@ int main(int argc, char **argv)
 		fgets(buffer, BUFFER_LEN, stdin);
 		buffer[strlen(buffer) - 1] = '\0'; // Remove \n in the end
 		
-		char pch = strtok (buffer, "");//////////////////////
-		while (pch != NULL)
+		char *pch = strtok(buffer, " ");
+		/*while (pch != NULL)
 		{
-			printf ("%s\n",pch);
-			pch = strtok (NULL, " ,.-");
-		}
+			printf ("token - %s\n",pch);
+			pch = strtok(NULL, " ");
+		}*/
 		
-		if (!strcmp(buffer, "list"))
+		if (!strcmp(pch, "list"))
 		{
 			intvec[0] = MTYPE_LIST;
 		}
-		if (!strcmp(buffer, "add"))
+		else if (!strcmp(pch, "add"))
 		{
 			intvec[0] = MTYPE_ADD;
-			intvec[1] = 100;
-			sprintf(buffer+(2*sizeof(int)), "%s", "Nameeee");
+			TAKETOKEN;
+			intvec[1] = atoi(pch);
+			TAKETOKEN;
+			sprintf(buffer+(2*sizeof(int)), "%s", pch);
+		}
+		else if (!strcmp(pch, "price"))
+		{
+			intvec[0] = MTYPE_PRICE;
+			TAKETOKEN;
+			intvec[1] = atoi(pch);
+			TAKETOKEN;
+			sprintf(buffer+(2*sizeof(int)), "%s", pch);
 		}
 		
 		int write_status = write(c, buffer, BUFFER_LEN);

@@ -99,7 +99,7 @@ Server::~Server(void)
 
 std::string Server::get_lot_list(void)
 {
-	std::string answer = "LOT LIST\nName    Start price    Price";
+	std::string answer = "LOT LIST\nName    Start price    Price\n";
 	std::string newlotstr;
 	for (const auto &e : lots)
 	{

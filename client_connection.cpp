@@ -137,4 +137,6 @@ void* Client_connection::thread_start(void *inst)
 	
 	instance->state = STATE_FINISHED;
 	printf("Client thread finished work\n");
+	
+	return NULL;
 }
