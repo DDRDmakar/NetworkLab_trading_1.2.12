@@ -3,6 +3,7 @@
 #define _H_SERVER
 
 #include <vector>
+#include <unordered_map>
 #include <pthread.h>
 
 #include "client_connection.hpp"
@@ -10,8 +11,8 @@
 
 struct Lot
 {
-	std::string name;
-	int price, start_price;
+	int price;
+	int start_price;
 };
 
 class Server
@@ -26,14 +27,15 @@ private:
 	static void* accepting_thread_start(void *inst);
 	
 	std::vector<Client_connection> connections;
-	std::vector<Lot> lots;
+	std::unordered_map<std::string, Lot> lots;
 	
 public:
 	Server(const int port, const int maxclients);
 	~Server(void);
 	
 	std::string get_lot_list(void);
-	void add_lot(Lot &newlot);
+	void add_lot(const std::string &name, const Lot &newlot);
+	Lot& get_lot(const std::string &name);
 	void finish(void);
 };
 

@@ -15,10 +15,14 @@
 // First 4 bytes - message type
 enum MESSAGE_TYPE
 {
+	MTYPE_RESPONSE_OK,
+	
 	MTYPE_LIST,
 	MTYPE_PRICE,
 	MTYPE_ADD,
-	MTYPE_FINISH
+	MTYPE_FINISH,
+	
+	MTYPE_ERROR_NAME
 };
 
 void error_out(const char* err)
@@ -71,10 +75,12 @@ int main(int argc, char **argv)
 			pch = strtok(NULL, " ");
 		}*/
 		
+		// LIST
 		if (!strcmp(pch, "list"))
 		{
 			intvec[0] = MTYPE_LIST;
 		}
+		// ADD
 		else if (!strcmp(pch, "add"))
 		{
 			intvec[0] = MTYPE_ADD;
@@ -83,6 +89,7 @@ int main(int argc, char **argv)
 			TAKETOKEN;
 			sprintf(buffer+(2*sizeof(int)), "%s", pch);
 		}
+		// PRICE
 		else if (!strcmp(pch, "price"))
 		{
 			intvec[0] = MTYPE_PRICE;
@@ -105,7 +112,11 @@ int main(int argc, char **argv)
 			goto close_socket; // If server closed connection, just close socket
 		}
 		
-		printf("\033[1;32m[%s]\033[0m\n", buffer);
+		if (*((int*)buffer) == MTYPE_RESPONSE_OK)
+		{
+			printf("\033[1;32mServer response: OK\033[0m\n");
+		}
+		else printf("\033[1;32m[%s]\033[0m\n", buffer);
 	}
 	
 	if (shutdown(c, SHUT_RDWR)) error_out("TCP connection shutdown failed");

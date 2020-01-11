@@ -49,7 +49,7 @@ Server::Server(const int port, const int maxclients) :
 void* Server::accepting_thread_start(void *inst)
 {
 	std::cout << "Accepting thread started" << std::endl;
-	auto *instance = static_cast<Server*>(inst);
+	Server *instance = static_cast<Server*>(inst);
 	
 	while (true)
 	{
@@ -103,18 +103,25 @@ std::string Server::get_lot_list(void)
 	std::string newlotstr;
 	for (const auto &e : lots)
 	{
-		newlotstr = e.name + " " + std::to_string(e.start_price) + " " + std::to_string(e.price) + "\n";
+		newlotstr = e.first + " " + std::to_string(e.second.start_price) + " " + std::to_string(e.second.price) + "\n";
 		answer += newlotstr;
 	}
 	return answer;
 }
 
-void Server::add_lot(Lot &newlot)
+void Server::add_lot(const std::string &name, const Lot &newlot)
 {
-	lots.push_back(newlot);
+	lots.insert(std::make_pair(name, newlot));
 }
 
 void Server::finish(void)
 {
 	printf("Server: finish all lots");
+}
+
+Lot& Server::get_lot(const std::string &name)
+{
+	auto res = lots.find(name);
+	if (res == lots.end()) throw Exception("Invalid lot name");
+	else return res->second;
 }

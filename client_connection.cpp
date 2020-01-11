@@ -17,9 +17,14 @@
 Client_connection::Client_connection(Server *server, const int socket_fd, const sockaddr_in addr) :
 	server (server),
 	socket_fd (socket_fd),
-	addr (addr)
+	addr (addr),
+	status (status)
 {
 	printf("Client constructor\n");
+	
+	// Recive buffer with authorization info
+	
+	
 	if (pthread_create(&client_thread, NULL, &thread_start, this))
 	{
 		printf("Error creating client thread\n");
@@ -96,18 +101,38 @@ void* Client_connection::thread_start(void *inst)
 				sprintf(buffer, "%s", l.c_str());
 				break;
 			}
-			case MTYPE_PRICE:
-			{
-				printf("Change price\n");
-				break;
-			}
 			case MTYPE_ADD:
 			{
 				printf("Add lot\n");
 				int start_price = intvec[1];
 				char *lot_name = buffer+(2*sizeof(int));
-				Lot newlot = {lot_name, start_price, start_price};
-				instance->server->add_lot(newlot);
+				Lot newlot = {start_price, start_price};
+				try
+				{
+					instance->server->add_lot(lot_name, newlot);
+				}
+				catch (Exception &e)
+				{
+					intvec[0] = MTYPE_ERROR_NAME;
+				}
+				break;
+			}
+			case MTYPE_PRICE:
+			{
+				printf("Change lot price\n");
+				int new_price = intvec[1];
+				char *lot_name = buffer+(2*sizeof(int));
+printf("lot name \"%s\", price %d ptr %p %p\n", lot_name, new_price, instance, instance->server);
+				try
+				{
+					Lot &current_lot = instance->server->get_lot(lot_name);
+					if (current_lot.price >= new_price) printf("Error - %d is not higher then price", new_price);
+					else current_lot.price = new_price;
+				}
+				catch (Exception &e)
+				{
+					intvec[0] = MTYPE_ERROR_NAME;
+				}
 				break;
 			}
 			case MTYPE_FINISH:
