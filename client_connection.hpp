@@ -10,6 +10,8 @@
 
 class Server;
 
+#define ADMIN_KEY 3000000
+
 // First 4 bytes - message type
 enum MESSAGE_TYPE
 {
@@ -50,7 +52,7 @@ public:
 	CLIENT_STATUS status;
 	
 	
-	Client_connection(Server *server, const int socket_fd, const sockaddr_in addr, const CLIENT_STATUS status);
+	Client_connection(Server *server, const int socket_fd, const sockaddr_in addr);
 	static std::string get_socket_str(Client_connection *instance);
 };
 

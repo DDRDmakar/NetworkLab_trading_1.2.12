@@ -18,7 +18,7 @@ Client_connection::Client_connection(Server *server, const int socket_fd, const 
 	server (server),
 	socket_fd (socket_fd),
 	addr (addr),
-	status (status)
+	status (CSTATUS_USER)
 {
 	printf("Client constructor\n");
 	
@@ -70,9 +70,20 @@ void* Client_connection::thread_start(void *inst)
 	std::cout << "Client connected: " << get_socket_str(instance) << std::endl;
 	
 	bzero(buffer, BUFFER_LEN);
-	
 	int read_status = 1;
 	
+	// Authorization
+	// Here we wait for 4 bytes of data - admin access key
+	read_status = custom_read(
+		instance->socket_fd, 
+		buffer, 
+		sizeof(int)
+	);
+	if (intvec[0] == ADMIN_KEY) instance->status = CSTATUS_ADMIN;
+	
+	std::cout << "CLient status: " << (instance->status == CSTATUS_ADMIN ? "ADMIN" : "USER") << std::endl;
+	
+	// Listen for requests
 	while (
 		strcmp(buffer, "q\r\n") && 
 		strcmp(buffer, "q")     &&
@@ -106,7 +117,7 @@ void* Client_connection::thread_start(void *inst)
 				printf("Add lot\n");
 				int start_price = intvec[1];
 				char *lot_name = buffer+(2*sizeof(int));
-				Lot newlot = {start_price, start_price};
+				Lot newlot = {start_price, start_price, ""};
 				try
 				{
 					instance->server->add_lot(lot_name, newlot);
@@ -126,8 +137,11 @@ printf("lot name \"%s\", price %d ptr %p %p\n", lot_name, new_price, instance, i
 				try
 				{
 					Lot &current_lot = instance->server->get_lot(lot_name);
-					if (current_lot.price >= new_price) printf("Error - %d is not higher then price", new_price);
-					else current_lot.price = new_price;
+					if ((current_lot.price < new_price) || (current_lot.winner.empty() && current_lot.price <= new_price))
+					{
+						current_lot.price = new_price;
+					}
+					else printf("Error - price %d is not the highest\n", new_price);
 				}
 				catch (Exception &e)
 				{

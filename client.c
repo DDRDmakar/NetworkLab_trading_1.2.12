@@ -11,6 +11,7 @@
 #define SERVER_PORT 6000
 #define BUFFER_LEN  256
 #define TAKETOKEN   pch = strtok(NULL, " ");
+#define ADMIN_KEY 3000000
 
 // First 4 bytes - message type
 enum MESSAGE_TYPE
@@ -61,6 +62,11 @@ int main(int argc, char **argv)
 	
 	int read_status = 1;
 	char *cl[10];
+	
+	// Authorization
+	intvec[0] = ADMIN_KEY;
+	int write_status = write(c, buffer, sizeof(int));
+	if (write_status < 0) error_out("Error writing data");
 	
 	while (read_status > 0 && strcmp(buffer, "q"))
 	{

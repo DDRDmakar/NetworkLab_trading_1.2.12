@@ -13,6 +13,7 @@ struct Lot
 {
 	int price;
 	int start_price;
+	std::string winner;
 };
 
 class Server
