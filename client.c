@@ -61,11 +61,12 @@ int main(int argc, char **argv)
 	bzero(buffer, BUFFER_LEN);
 	
 	int read_status = 1;
-	char *cl[10];
+	int write_status = 1;
 	
 	// Authorization
 	intvec[0] = ADMIN_KEY;
-	int write_status = write(c, buffer, sizeof(int));
+	sprintf(buffer+sizeof(int), "%s", "FOMA");
+	write_status = write(c, buffer, BUFFER_LEN);
 	if (write_status < 0) error_out("Error writing data");
 	
 	while (read_status > 0 && strcmp(buffer, "q"))
@@ -105,7 +106,7 @@ int main(int argc, char **argv)
 			sprintf(buffer+(2*sizeof(int)), "%s", pch);
 		}
 		
-		int write_status = write(c, buffer, BUFFER_LEN);
+		write_status = write(c, buffer, BUFFER_LEN);
 		if (write_status < 0) error_out("Error writing data");
 		
 		bzero(buffer, BUFFER_LEN);

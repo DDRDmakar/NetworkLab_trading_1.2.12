@@ -11,6 +11,9 @@
 class Server;
 
 #define ADMIN_KEY 3000000
+#define BUFFER_LEN 256
+
+int custom_read(int socket_fd, char *buf, const int buf_len);
 
 // First 4 bytes - message type
 enum MESSAGE_TYPE
@@ -25,6 +28,12 @@ enum MESSAGE_TYPE
 	MTYPE_ERROR_NAME
 };
 
+enum STATE
+{
+	STATE_WORKING,  // Thread is active - listening client messages
+	STATE_FINISHED  // CLient disconnected
+};
+
 enum CLIENT_STATUS
 {
 	CSTATUS_USER,
@@ -34,11 +43,6 @@ enum CLIENT_STATUS
 class Client_connection
 {
 private:
-	enum STATE
-	{
-		STATE_WORKING,  // Thread is active - listening client messages
-		STATE_FINISHED  // CLient disconnected
-	};
 	
 	Server *server;
 	pthread_t client_thread;
@@ -50,9 +54,11 @@ public:
 	const int socket_fd;
 	sockaddr_in addr;
 	CLIENT_STATUS status;
+	const std::string id;
 	
 	
-	Client_connection(Server *server, const int socket_fd, const sockaddr_in addr);
+	Client_connection(Server *server, const int socket_fd, const sockaddr_in addr, const CLIENT_STATUS status, const std::string id);
+	~Client_connection(void);
 	static std::string get_socket_str(Client_connection *instance);
 };
 

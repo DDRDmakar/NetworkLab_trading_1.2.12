@@ -12,15 +12,15 @@
 #include "server.hpp"
 #include "client_connection.hpp"
 
-#define BUFFER_LEN 256
 
-Client_connection::Client_connection(Server *server, const int socket_fd, const sockaddr_in addr) :
+Client_connection::Client_connection(Server *server, const int socket_fd, const sockaddr_in addr, const CLIENT_STATUS status, const std::string id) :
 	server (server),
 	socket_fd (socket_fd),
 	addr (addr),
-	status (CSTATUS_USER)
+	status (status),
+	id (id)
 {
-	printf("Client constructor\n");
+	printf("\033[1;32mClient \"%s\" constructor\033[0m\n", id.c_str());
 	
 	// Recive buffer with authorization info
 	
@@ -71,15 +71,7 @@ void* Client_connection::thread_start(void *inst)
 	
 	bzero(buffer, BUFFER_LEN);
 	int read_status = 1;
-	
-	// Authorization
-	// Here we wait for 4 bytes of data - admin access key
-	read_status = custom_read(
-		instance->socket_fd, 
-		buffer, 
-		sizeof(int)
-	);
-	if (intvec[0] == ADMIN_KEY) instance->status = CSTATUS_ADMIN;
+	int write_status = 1;
 	
 	std::cout << "CLient status: " << (instance->status == CSTATUS_ADMIN ? "ADMIN" : "USER") << std::endl;
 	
@@ -88,7 +80,8 @@ void* Client_connection::thread_start(void *inst)
 		strcmp(buffer, "q\r\n") && 
 		strcmp(buffer, "q")     &&
 		read_status > 0         &&
-		instance->state == STATE_WORKING
+		instance->state == STATE_WORKING &&
+		write_status > 0
 	)
 	{
 		bzero(buffer, BUFFER_LEN);
@@ -164,9 +157,9 @@ printf("lot name \"%s\", price %d ptr %p %p\n", lot_name, new_price, instance, i
 			}
 		}
 		
-		printf("\033[1;36mClient %d message: [%s]\033[0m\n", 228, buffer);
+		printf("\033[1;36mClient \"%s\" message: [%s]\033[0m\n", instance->id.c_str(), buffer);
 		
-		int write_status = write(
+		write_status = write(
 			instance->socket_fd,
 			buffer,
 			BUFFER_LEN
@@ -178,4 +171,29 @@ printf("lot name \"%s\", price %d ptr %p %p\n", lot_name, new_price, instance, i
 	printf("Client thread finished work\n");
 	
 	return NULL;
+}
+
+Client_connection::~Client_connection(void)
+{
+	printf("\033[1;31mClient \"%s\" destructor\033[0m\n", id.c_str());
+	
+	// shutdown
+	if (shutdown(socket_fd, SHUT_RDWR))
+		printf("TCP connection shutdown failed\n");
+	// close
+	if (close(socket_fd))
+		printf("Socket closing failed\n");
+	state = STATE_FINISHED;
+	
+	// Try to join client thread
+	if (pthread_join(client_thread, NULL))
+	{
+		printf("Error joining thread\n");
+	}
+	else
+	{
+		printf("Stopped client thread\n");
+	}
+	
+	state = STATE_FINISHED;
 }

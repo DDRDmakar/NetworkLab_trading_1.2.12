@@ -13,7 +13,8 @@
 // Server class constructor. Initializing listening port
 Server::Server(const int port, const int maxclients) : 
 	port (port),
-	maxclients (maxclients)
+	maxclients (maxclients),
+	current_id (0)
 {
 	// Create socket
 	socket_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -51,6 +52,9 @@ void* Server::accepting_thread_start(void *inst)
 	std::cout << "Accepting thread started" << std::endl;
 	Server *instance = static_cast<Server*>(inst);
 	
+	char buffer[BUFFER_LEN];
+	int *intvec = (int*)buffer;
+	
 	while (true)
 	{
 		listen(instance->socket_fd, 5);
@@ -65,16 +69,44 @@ void* Server::accepting_thread_start(void *inst)
 		);
 		if (client_handler < 0) break; // If server socket is closed
 		
-		/////////////////TODO join_threads();
-		
 		if (instance->connections.size() >= instance->maxclients)
 		{
 			std::cout << "Unable to create more client threads\n";
 			continue;
 		}
 		
-		// Construct new connection at vector back
-		instance->connections.emplace_back(instance, client_handler, client_addr);
+		instance->clear_inactive();
+		
+		// Authorization
+		// Here we wait for 4 bytes of data - admin access key
+		// And following string - user ID
+		bzero(buffer, BUFFER_LEN);
+		int read_status = custom_read(
+			client_handler, 
+			buffer, 
+			BUFFER_LEN
+		);
+		printf("Read status %d\n", read_status);
+		CLIENT_STATUS client_status;
+		if (intvec[0] == ADMIN_KEY) client_status = CSTATUS_ADMIN;
+		else client_status = CSTATUS_USER;
+		char *client_id = buffer + sizeof(int);
+		
+		printf("User ID is %s\n", client_id);
+		// Construct new connection
+		auto res = instance->connections.find(client_id);
+		auto newconn = new Client_connection(instance, client_handler, client_addr, client_status, client_id);
+		if (res == instance->connections.end())
+		{
+			instance->connections.insert(
+				std::make_pair(client_id, newconn)
+			);
+		}
+		else
+		{
+			printf("Error adding client with the same name\n");
+			delete newconn;
+		}
 	}
 	
 	return NULL;
@@ -111,7 +143,9 @@ std::string Server::get_lot_list(void)
 
 void Server::add_lot(const std::string &name, const Lot &newlot)
 {
-	lots.insert(std::make_pair(name, newlot));
+	auto res = lots.find(name);
+	if (res == lots.end()) lots.insert(std::make_pair(name, newlot));
+	else printf("Error adding lot with the same name\n");
 }
 
 void Server::finish(void)
@@ -124,4 +158,22 @@ Lot& Server::get_lot(const std::string &name)
 	auto res = lots.find(name);
 	if (res == lots.end()) throw Exception("Invalid lot name");
 	else return res->second;
+}
+
+unsigned int Server::gen_id(void)
+{
+	return ++current_id;
+}
+
+void Server::clear_inactive(void)
+{
+	for (auto it = connections.begin(); it != connections.end(); it++)
+	{
+		if (it->second->state == STATE_FINISHED)
+		{
+			delete it->second;
+			connections.erase(it);
+			break;
+		}
+	}
 }
