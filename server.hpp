@@ -41,6 +41,7 @@ public:
 	void finish(void);
 	unsigned int gen_id(void);
 	void clear_inactive(void);
+	void disconnect(const std::string &id);
 };
 
 #endif

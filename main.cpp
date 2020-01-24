@@ -26,6 +26,15 @@
  *     10) Принудительное отключение клиента
  */
 
+/*
+ * Команды сервера:
+ * Команды клиента:
+ *     list - получить текущий список лотов
+ *     add <price> <name> - Добавить лот со стартовой ценой
+ *     price <newprice> <name> - Повышение цены лота
+ *     disconnect <name> - Разорвать соединение с участником торгов
+ */
+
 
 #include <iostream>
 
@@ -51,6 +60,22 @@ int main(int argc, char** argv)
 	return 0;
 }
 
+// TOKENIZE STRING
+std::vector<std::string> tokenize_string(const std::string &str, char delim = ' ')
+{
+	std::vector<std::string> cont;
+	std::size_t current, previous= 0;
+	current = str.find(delim);
+	while (current != std::string::npos)
+	{
+		cont.push_back(str.substr(previous, current - previous));
+		previous = current + 1;
+		current = str.find(delim, previous);
+	}
+	cont.push_back(str.substr(previous, current - previous));
+	
+	return cont;
+}
 
 // LISTENING CONSOLE INPUT
 void cli_routine(Server *servak)
@@ -72,7 +97,14 @@ void cli_routine(Server *servak)
 	
 	while (cmd != "exit")
 	{
-		std::cin >> cmd;
+		std::getline(std::cin, cmd);
+		auto args = tokenize_string(cmd);
+		
+		if (args[0] == "disconnect" && args.size() == 2)
+		{
+			servak->disconnect(args[1]);
+		}
+		
 		/*printf("> ");
 		bzero(buffer, BUFFER_LEN);
 		

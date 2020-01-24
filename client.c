@@ -90,11 +90,11 @@ int main(int argc, char **argv)
 		// ADD
 		else if (!strcmp(pch, "add"))
 		{
-			intvec[0] = MTYPE_ADD;
+			intvec[0] = MTYPE_ADD; // Add
 			TAKETOKEN;
-			intvec[1] = atoi(pch);
+			intvec[1] = atoi(pch); // Price
 			TAKETOKEN;
-			sprintf(buffer+(2*sizeof(int)), "%s", pch);
+			sprintf(buffer+(2*sizeof(int)), "%s", pch); // Name
 		}
 		// PRICE
 		else if (!strcmp(pch, "price"))

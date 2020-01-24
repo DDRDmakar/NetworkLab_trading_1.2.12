@@ -177,3 +177,13 @@ void Server::clear_inactive(void)
 		}
 	}
 }
+
+void Server::disconnect(const std::string &id)
+{
+	auto res = connections.find(id);
+	if (res != connections.end())
+	{
+		delete res->second;
+		connections.erase(res);
+	}
+}
