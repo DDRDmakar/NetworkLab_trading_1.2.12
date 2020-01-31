@@ -11,6 +11,7 @@
 
 #include "server.hpp"
 #include "client_connection.hpp"
+#include "tools.hpp"
 
 
 Client_connection::Client_connection(Server *server, const int socket_fd, const sockaddr_in addr, const CLIENT_STATUS status, const std::string id) :
@@ -93,68 +94,17 @@ void* Client_connection::thread_start(void *inst)
 			BUFFER_LEN
 		);
 		
+		std::cout << "Buffer: |" << buffer << "|\n";
+		
 		if (instance->state != STATE_WORKING) break;
 		
-		int mtype = intvec[0];
-		switch (mtype)
+		auto tokens = tokenize_string(buffer); // Args vector
+		
+		if (false) {}
+		else
 		{
-			case MTYPE_LIST:
-			{
-				printf("Send list to client\n");
-				std::string l = instance->server->get_lot_list();
-				sprintf(buffer, "%s", l.c_str());
-				break;
-			}
-			case MTYPE_ADD:
-			{
-				printf("Add lot\n");
-				int start_price = intvec[1];
-				char *lot_name = buffer+(2*sizeof(int));
-				Lot newlot = {start_price, start_price, ""};
-				try
-				{
-					instance->server->add_lot(lot_name, newlot);
-				}
-				catch (Exception &e)
-				{
-					intvec[0] = MTYPE_ERROR_NAME;
-				}
-				break;
-			}
-			case MTYPE_PRICE:
-			{
-				printf("Change lot price\n");
-				int new_price = intvec[1];
-				char *lot_name = buffer+(2*sizeof(int));
-printf("lot name \"%s\", price %d ptr %p %p\n", lot_name, new_price, instance, instance->server);
-				try
-				{
-					Lot &current_lot = instance->server->get_lot(lot_name);
-					if ((current_lot.price < new_price) || (current_lot.winner.empty() && current_lot.price <= new_price))
-					{
-						current_lot.price = new_price;
-					}
-					else printf("Error - price %d is not the highest\n", new_price);
-				}
-				catch (Exception &e)
-				{
-					intvec[0] = MTYPE_ERROR_NAME;
-				}
-				break;
-			}
-			case MTYPE_FINISH:
-			{
-				printf("Finish trading\n");
-				instance->server->finish();
-				//read_status = 0;
-				//continue;
-				break;
-			}
-			default:
-			{
-				printf("Error - wrong message type\n");
-				break;
-			}
+			instance->server->command(instance->id, tokens, buffer, BUFFER_LEN);
+			if (intvec[0] == MTYPE_DISCONNECT) break;
 		}
 		
 		printf("\033[1;36mClient \"%s\" message: [%s]\033[0m\n", instance->id.c_str(), buffer);

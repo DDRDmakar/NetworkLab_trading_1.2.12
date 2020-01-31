@@ -14,7 +14,8 @@
 Server::Server(const int port, const int maxclients) : 
 	port (port),
 	maxclients (maxclients),
-	current_id (0)
+	current_id (0),
+	trading_active (true)
 {
 	// Create socket
 	socket_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -131,11 +132,11 @@ Server::~Server(void)
 
 std::string Server::get_lot_list(void)
 {
-	std::string answer = "LOT LIST\nName    Start price    Price\n";
+	std::string answer = "LOT LIST\nName    Start price    Price    Winner\n";
 	std::string newlotstr;
 	for (const auto &e : lots)
 	{
-		newlotstr = e.first + " " + std::to_string(e.second.start_price) + " " + std::to_string(e.second.price) + "\n";
+		newlotstr = e.first + " " + std::to_string(e.second.start_price) + " " + std::to_string(e.second.price.back()) + " " + e.second.winner.back() + "\n";
 		answer += newlotstr;
 	}
 	return answer;
@@ -151,6 +152,18 @@ void Server::add_lot(const std::string &name, const Lot &newlot)
 void Server::finish(void)
 {
 	printf("Server: finish all lots");
+	
+	trading_active = false;
+	
+	for (auto &e : lots)
+	{
+		// Get rid of disconnected winners
+		while (!e.second.winner.back().empty() && connections.find(e.second.winner.back()) == connections.end())
+		{
+			e.second.winner.pop_back();
+			e.second.price.pop_back();
+		}
+	}
 }
 
 Lot& Server::get_lot(const std::string &name)
@@ -185,5 +198,81 @@ void Server::disconnect(const std::string &id)
 	{
 		delete res->second;
 		connections.erase(res);
+	}
+}
+
+bool Server::is_trading_active(void)
+{
+	return trading_active;
+}
+
+
+void Server::command(const std::string &client_id, const std::vector<std::string> &tokens, char *o_buffer, const size_t o_buffer_len)
+{
+	int *intvec = (int*)o_buffer;
+	
+	if (tokens.size() == 1 && tokens[0] == "list")
+	{
+		std::string l = get_lot_list();
+		sprintf(o_buffer, "%s", l.c_str());
+	}
+	else if (tokens.size() == 1 && tokens[0] == "q")
+	{
+		intvec[0] = MTYPE_DISCONNECT;
+	}
+	else if (tokens.size() == 3 && tokens[0] == "add")
+	{
+		try
+		{
+			int start_price = std::stoi(tokens[2]);
+			Lot newlot = {start_price, {start_price}, {""}};
+			add_lot(tokens[1], newlot);
+		}
+		catch (Exception &e) // Incorrect client ID
+		{
+			intvec[0] = MTYPE_ERROR_NAME;
+		}
+		catch (std::exception &e) // Incorrect number passed
+		{
+			intvec[0] = MTYPE_ERROR_NUM;
+		}
+	}
+	else if (tokens.size() == 3 && tokens[0] == "price")
+	{
+		int new_price = std::stoi(tokens[2]);
+		std::string lot_name = tokens[1];
+		try
+		{
+			// Get reference to lot
+			Lot &current_lot = get_lot(lot_name);
+			
+			if (
+				(current_lot.price.back() < new_price) || 
+				(current_lot.price.back() <= new_price && current_lot.winner.back().empty())
+			)
+			{
+				current_lot.price.push_back(new_price);
+				current_lot.winner.push_back(client_id);
+			}
+			else printf("Error - price %d is not the highest\n", new_price);
+		}
+		catch (Exception &e)
+		{
+			intvec[0] = MTYPE_ERROR_NAME;
+		}
+	}
+	else if (tokens.size() == 1 && tokens[0] == "finish")
+	{
+		printf("Finish trading\n");
+		finish();
+	}
+	else if (tokens.size() == 2 && tokens[0] == "disconnect")
+	{
+		if (tokens[1] == client_id) intvec[0] = MTYPE_ERROR_DISCONNECT;
+		else disconnect(tokens[1]);
+	}
+	else
+	{
+		printf("Error - wrong message type\n");
 	}
 }

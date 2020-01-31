@@ -27,18 +27,20 @@
  */
 
 /*
- * Команды сервера:
+ * Команды администратора:
+ *     add <price> <name> - Добавить лот со стартовой ценой
+ *     disconnect <name> - Разорвать соединение с участником торгов
+ *     finish - завершение торгов
  * Команды клиента:
  *     list - получить текущий список лотов
- *     add <price> <name> - Добавить лот со стартовой ценой
  *     price <newprice> <name> - Повышение цены лота
- *     disconnect <name> - Разорвать соединение с участником торгов
  */
 
 
 #include <iostream>
 
 #include "server.hpp"
+#include "tools.hpp"
 
 
 void cli_routine(Server *servak);
@@ -60,23 +62,6 @@ int main(int argc, char** argv)
 	return 0;
 }
 
-// TOKENIZE STRING
-std::vector<std::string> tokenize_string(const std::string &str, char delim = ' ')
-{
-	std::vector<std::string> cont;
-	std::size_t current, previous= 0;
-	current = str.find(delim);
-	while (current != std::string::npos)
-	{
-		cont.push_back(str.substr(previous, current - previous));
-		previous = current + 1;
-		current = str.find(delim, previous);
-	}
-	cont.push_back(str.substr(previous, current - previous));
-	
-	return cont;
-}
-
 // LISTENING CONSOLE INPUT
 void cli_routine(Server *servak)
 {
@@ -94,15 +79,25 @@ void cli_routine(Server *servak)
 	//pthread_mutex_init(&mut, &matr);
 	
 	std::string cmd;
+	char buffer[BUFFER_LEN];
+	int *intvec = (int*)buffer;
 	
-	while (cmd != "exit")
+	while (cmd != "q")
 	{
 		std::getline(std::cin, cmd);
-		auto args = tokenize_string(cmd);
+		auto tokens = tokenize_string(cmd); // Args vector
 		
-		if (args[0] == "disconnect" && args.size() == 2)
+		/*if (args[0] == "disconnect" && args.size() == 2)
 		{
 			servak->disconnect(args[1]);
+		}*/
+		
+		if (false) {}
+		else
+		{
+			servak->command("", tokens, buffer, BUFFER_LEN);
+			if (intvec[0] == MTYPE_DISCONNECT) break;
+			else std::cout << buffer << std::endl;
 		}
 		
 		/*printf("> ");

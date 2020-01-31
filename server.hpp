@@ -3,6 +3,7 @@
 #define _H_SERVER
 
 #include <vector>
+#include <list>
 #include <unordered_map>
 #include <pthread.h>
 
@@ -11,9 +12,9 @@
 
 struct Lot
 {
-	int price;
 	int start_price;
-	std::string winner;
+	std::list<int> price;
+	std::list<std::string> winner;
 };
 
 class Server
@@ -24,6 +25,7 @@ private:
 	int socket_fd; // Server socket handler
 	pthread_t cli_thread, accepting_thread;
 	unsigned int current_id;
+	bool trading_active; // Is trading still active or not
 	
 	static void*       cli_thread_start(void *inst);
 	static void* accepting_thread_start(void *inst);
@@ -42,6 +44,8 @@ public:
 	unsigned int gen_id(void);
 	void clear_inactive(void);
 	void disconnect(const std::string &id);
+	bool is_trading_active(void);
+	void command(const std::string &client_id, const std::vector<std::string> &tokens, char *o_buffer, const size_t o_buffer_len);
 };
 
 #endif

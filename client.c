@@ -6,6 +6,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <sys/poll.h>
 
 #define SERVER_ADDR "127.0.0.1"
 #define SERVER_PORT 6000
@@ -72,58 +73,53 @@ int main(int argc, char **argv)
 	while (read_status > 0 && strcmp(buffer, "q"))
 	{
 		bzero(buffer, BUFFER_LEN);
-		fgets(buffer, BUFFER_LEN, stdin);
-		buffer[strlen(buffer) - 1] = '\0'; // Remove \n in the end
 		
-		char *pch = strtok(buffer, " ");
-		/*while (pch != NULL)
-		{
-			printf ("token - %s\n",pch);
-			pch = strtok(NULL, " ");
-		}*/
+		// Read from stdin and socket fd
+		struct pollfd pfds[2];
+		pfds[0].fd = STDIN_FILENO;
+		pfds[0].events = POLLIN;
+		pfds[0].revents = 0;
+		pfds[1].fd = c;
+		pfds[1].events = POLLIN;
+		pfds[1].revents = 0;
 		
-		// LIST
-		if (!strcmp(pch, "list"))
+		poll(pfds, 3, -1); // Wait here
+		
+		// If we typed command in client console
+		if (pfds[0].revents & POLLIN)
 		{
-			intvec[0] = MTYPE_LIST;
-		}
-		// ADD
-		else if (!strcmp(pch, "add"))
-		{
-			intvec[0] = MTYPE_ADD; // Add
-			TAKETOKEN;
-			intvec[1] = atoi(pch); // Price
-			TAKETOKEN;
-			sprintf(buffer+(2*sizeof(int)), "%s", pch); // Name
-		}
-		// PRICE
-		else if (!strcmp(pch, "price"))
-		{
-			intvec[0] = MTYPE_PRICE;
-			TAKETOKEN;
-			intvec[1] = atoi(pch);
-			TAKETOKEN;
-			sprintf(buffer+(2*sizeof(int)), "%s", pch);
+			printf("Reading stdin\n");
+			
+			fgets(buffer, BUFFER_LEN, stdin);
+			buffer[strlen(buffer) - 1] = '\0'; // Remove \n in the end
+			
+			if (!strcmp(buffer, "q")) break;
+			
+			write_status = write(c, buffer, BUFFER_LEN);
+			if (write_status < 0) error_out("Error writing data");
 		}
 		
-		write_status = write(c, buffer, BUFFER_LEN);
-		if (write_status < 0) error_out("Error writing data");
-		
-		bzero(buffer, BUFFER_LEN);
-		
-		read_status = custom_read(c, buffer, BUFFER_LEN);
-		
-		if (read_status == 0)
+		// If we have incoming message from server
+		if (pfds[1].revents & POLLIN)
 		{
-			printf("Disconnected from server\n");
-			goto close_socket; // If server closed connection, just close socket
+			printf("Reading socket\n");
+			
+			bzero(buffer, BUFFER_LEN);
+			
+			read_status = custom_read(c, buffer, BUFFER_LEN);
+			
+			if (read_status == 0)
+			{
+				printf("Disconnected from server\n");
+				goto close_socket; // If server closed connection, just close socket
+			}
+			
+			if (*((int*)buffer) == MTYPE_RESPONSE_OK)
+			{
+				printf("\033[1;32mServer response: OK\033[0m\n");
+			}
+			else printf("\033[1;32m[%s]\033[0m\n", buffer);
 		}
-		
-		if (*((int*)buffer) == MTYPE_RESPONSE_OK)
-		{
-			printf("\033[1;32mServer response: OK\033[0m\n");
-		}
-		else printf("\033[1;32m[%s]\033[0m\n", buffer);
 	}
 	
 	if (shutdown(c, SHUT_RDWR)) error_out("TCP connection shutdown failed");
