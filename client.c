@@ -15,17 +15,20 @@
 #define ADMIN_KEY 3000000
 
 // First 4 bytes - message type
-enum MESSAGE_TYPE
+typedef enum MESSAGE_TYPE
 {
-	MTYPE_RESPONSE_OK,
+	MTYPE_RESPONSE_OK = 30,
 	
-	MTYPE_LIST,
-	MTYPE_PRICE,
-	MTYPE_ADD,
-	MTYPE_FINISH,
+	MTYPE_DISCONNECT,
+	MTYPE_TEXT,
 	
-	MTYPE_ERROR_NAME
-};
+	MTYPE_ERROR_NAME,
+	MTYPE_ERROR_NUM,
+	MTYPE_ERROR_RIGHTS,
+	MTYPE_ERROR_DISCONNECT,
+	MTYPE_ERROR_COMMAND,
+	MTYPE_ERROR_PRICE
+} MESSAGE_TYPE;
 
 void error_out(const char* err)
 {
@@ -43,16 +46,26 @@ int custom_read(int desc, char *buf, const unsigned int buf_len)
 
 int main(int argc, char **argv)
 {
+	if (argc < 4)
+	{
+		printf("Not enough arguments\n");
+		return 1;
+	}
+	
 	int c = socket(AF_INET, SOCK_STREAM, 0);
 	if (c < 0) error_out("Socket creation failed");
 	
 	struct sockaddr_in serv_addr;
 	bzero((char *) &serv_addr, sizeof(serv_addr));
 	
+	const char *client_name = argv[1];
+	const char *client_status_str = argv[2];
+	const char *server_addr = argv[3];
+	
 	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_addr.s_addr = inet_addr(SERVER_ADDR);
+	serv_addr.sin_addr.s_addr = inet_addr(server_addr);
 	serv_addr.sin_port = htons(SERVER_PORT);
-	printf("Server socket: %s:%d\n", SERVER_ADDR, SERVER_PORT);
+	printf("Server socket: %s:%d\n", server_addr, SERVER_PORT);
 	
 	int connection_status = connect(c, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
 	if (connection_status) error_out("Error establishing connection");
@@ -65,8 +78,8 @@ int main(int argc, char **argv)
 	int write_status = 1;
 	
 	// Authorization
-	intvec[0] = ADMIN_KEY;
-	sprintf(buffer+sizeof(int), "%s", "FOMA");
+	intvec[0] = !strcmp(client_status_str, "admin") ? ADMIN_KEY : 0;
+	sprintf(buffer+sizeof(int), "%s", client_name);
 	write_status = write(c, buffer, BUFFER_LEN);
 	if (write_status < 0) error_out("Error writing data");
 	
@@ -107,18 +120,33 @@ int main(int argc, char **argv)
 			bzero(buffer, BUFFER_LEN);
 			
 			read_status = custom_read(c, buffer, BUFFER_LEN);
-			
 			if (read_status == 0)
 			{
 				printf("Disconnected from server\n");
 				goto close_socket; // If server closed connection, just close socket
 			}
 			
-			if (*((int*)buffer) == MTYPE_RESPONSE_OK)
+			MESSAGE_TYPE t = intvec[0];
+			printf("Return code: %d\n", t);
+			
+			switch (t)
 			{
-				printf("\033[1;32mServer response: OK\033[0m\n");
+				case MTYPE_RESPONSE_OK: { printf("Server response: OK\n"); break; }
+				case MTYPE_DISCONNECT:  { printf("Server closed connection\n"); break; }
+				case MTYPE_TEXT:        { printf("\033[1;32m%s\033[0m\n", buffer+sizeof(int)); break; }
+				
+				case MTYPE_ERROR_NAME:       { printf("Error - incorrect name\n"); break; }
+				case MTYPE_ERROR_NUM:        { printf("Error - incorrect number passed\n"); break; }
+				case MTYPE_ERROR_RIGHTS:     { printf("Error - You are not allowed to do this\n"); break; }
+				case MTYPE_ERROR_DISCONNECT: { printf("Error - You cannot disconnect this user\n"); break; }
+				case MTYPE_ERROR_COMMAND:    { printf("Error - Incorrect command format\n"); break; }
+				case MTYPE_ERROR_PRICE:      { printf("Error - given price is not the highest\n"); break; }
+				default:
+				{
+					printf("Unknown response code\n");
+					break;
+				}
 			}
-			else printf("\033[1;32m[%s]\033[0m\n", buffer);
 		}
 	}
 	

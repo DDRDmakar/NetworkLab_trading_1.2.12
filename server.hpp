@@ -33,13 +33,17 @@ private:
 	std::unordered_map<std::string, Client_connection*> connections;
 	std::unordered_map<std::string, Lot> lots;
 	
+	// MUTEX
+	pthread_mutex_t     mutex_connections, mutex_lots;
+	pthread_mutexattr_t matr_connections,  matr_lots;
+	
 public:
 	Server(const int port, const int maxclients);
 	~Server(void);
 	
 	std::string get_lot_list(void);
+	std::string get_user_list(void);
 	void add_lot(const std::string &name, const Lot &newlot);
-	Lot& get_lot(const std::string &name);
 	void finish(void);
 	unsigned int gen_id(void);
 	void clear_inactive(void);

@@ -87,76 +87,15 @@ void cli_routine(Server *servak)
 		std::getline(std::cin, cmd);
 		auto tokens = tokenize_string(cmd); // Args vector
 		
-		/*if (args[0] == "disconnect" && args.size() == 2)
-		{
-			servak->disconnect(args[1]);
-		}*/
-		
 		if (false) {}
 		else
 		{
 			servak->command("", tokens, buffer, BUFFER_LEN);
 			if (intvec[0] == MTYPE_DISCONNECT) break;
-			else std::cout << buffer << std::endl;
-		}
-		
-		/*printf("> ");
-		bzero(buffer, BUFFER_LEN);
-		
-		// WAITING HERE
-		fgets(buffer, BUFFER_LEN, stdin);
-		
-		pthread_mutex_lock(&mut);
-		
-		 // Show thread list
-		if (!strcmp(buffer, "list\n"))
-		{
-			print_threadlist();
-		}
-		
-		// Close connection with clinet N
-		if ('0' <= buffer[0] && buffer[0] <= '9')
-		{
-			int thread_idx = atoi(buffer);
-			if (
-				thread_idx < 0                         ||
-				thread_idx >= MAX_CLIENT_THREAD_NUMBER ||
-				clients[thread_idx].state != TSTATE_WORKING
-			)
+			else
 			{
-				error_proceed("Error - client does not exist");
-				pthread_mutex_unlock(&mut);
-				continue;
+				if (intvec[0] == MTYPE_TEXT) std::cout << buffer + sizeof(int) << std::endl;
 			}
-			disconnect_client(thread_idx);
-			stop_client(thread_idx);
 		}
-		
-		// Show help text
-		if (!strcmp(buffer, "help\n"))
-		{
-			printf(
-				"*\n"
-				"* Список доступных команд:\n"
-				"*     help - показать это сообщение\n"
-				"*     list - показать список клиентов и их статус\n"
-				"*     <N>  - разорвать соединение с\n"
-				"*            клиентом номер N\n"
-				"*     exit - завершить работу сервера\n"
-				"*\n"
-			);
-		}
-		
-		pthread_mutex_unlock(&mut);*/
 	}
-	/*
-	int s = *((int*)arg);
-	
-	printf("Server is shutting down\n");
-	
-	if (shutdown(s, SHUT_RDWR)) error_out("TCP connection shutdown failed");
-	if (close(s)) error_out("Server socket closing failed");
-	
-	printf("CLI thread finish\n");
-	*/
 }

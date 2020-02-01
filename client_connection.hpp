@@ -18,16 +18,17 @@ int custom_read(int socket_fd, char *buf, const int buf_len);
 // First 4 bytes - message type
 enum MESSAGE_TYPE
 {
-	MTYPE_RESPONSE_OK,
+	MTYPE_RESPONSE_OK = 30,
 	
-	MTYPE_LIST,
-	MTYPE_PRICE,
-	MTYPE_ADD,
-	MTYPE_FINISH,
 	MTYPE_DISCONNECT,
+	MTYPE_TEXT,
 	
 	MTYPE_ERROR_NAME,
-	MTYPE_ERROR_NUM
+	MTYPE_ERROR_NUM,
+	MTYPE_ERROR_RIGHTS,
+	MTYPE_ERROR_DISCONNECT,
+	MTYPE_ERROR_COMMAND,
+	MTYPE_ERROR_PRICE
 };
 
 enum STATE
@@ -45,9 +46,10 @@ enum CLIENT_STATUS
 class Client_connection
 {
 private:
-	
 	Server *server;
 	pthread_t client_thread;
+	pthread_mutex_t     mutex_client_socket;
+	pthread_mutexattr_t matr_client_socket;
 	
 	static void* thread_start(void *inst);
 	
@@ -62,6 +64,7 @@ public:
 	Client_connection(Server *server, const int socket_fd, const sockaddr_in addr, const CLIENT_STATUS status, const std::string id);
 	~Client_connection(void);
 	static std::string get_socket_str(Client_connection *instance);
+	void send(const std::string &message);
 };
 
 #endif
