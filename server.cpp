@@ -136,6 +136,7 @@ Server::~Server(void)
 			if (shutdown(socket_fd, SHUT_RDWR)) printf("Server connection shutdown failed\n");
 			if (close(socket_fd)) printf("Server socket closing failed\n");
 		}
+		
 	}
 }
 
@@ -175,7 +176,10 @@ void Server::add_lot(const std::string &name, const Lot &newlot)
 	pthread_mutex_lock(&mutex_lots);
 	auto res = lots.find(name);
 	if (res == lots.end()) lots.insert(std::make_pair(name, newlot));
-	else printf("Error adding lot with the same name\n");
+	else
+	{
+		printf("Error adding lot with the same name\n");
+	}
 	pthread_mutex_unlock(&mutex_lots);
 }
 
@@ -284,6 +288,12 @@ void Server::command(const std::string &client_id, const std::vector<std::string
 	}
 	else if (tokens.size() == 1 && tokens[0] == "q")
 	{
+		trading_active = false;
+		// DIsconnect all clients
+		for (const auto &e : connections)
+		{
+			disconnect(e.second->id);
+		}
 		intvec[0] = MTYPE_DISCONNECT;
 	}
 	else if (tokens.size() == 3 && tokens[0] == "add")
